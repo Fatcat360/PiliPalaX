@@ -1,6 +1,5 @@
 import 'dart:developer';
 import 'package:dio/dio.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:hive/hive.dart';
 import '../common/constants.dart';
@@ -28,6 +27,7 @@ import 'login.dart';
 /// view层根据 status 判断渲染逻辑
 class VideoHttp {
   static Box localCache = GStorage.localCache;
+  static Box onlineCache = GStorage.onlineCache;
   static Box setting = GStorage.setting;
   static bool enableRcmdDynamic =
       setting.get(SettingBoxKey.enableRcmdDynamic, defaultValue: true);
@@ -49,8 +49,8 @@ class VideoHttp {
     );
     if (res.data['code'] == 0) {
       List<RecVideoItemModel> list = [];
-      List<int> blackMidsList = localCache
-          .get(LocalCacheKey.blackMidsList, defaultValue: [-1])
+      List<int> blackMidsList = onlineCache
+          .get(OnlineCacheKey.blackMidsList, defaultValue: [-1])
           .map<int>((e) => e as int)
           .toList();
       for (var i in res.data['data']['item']) {
@@ -80,7 +80,7 @@ class VideoHttp {
               '')
           : '',
       'appkey': Constants.appKey,
-      'build': '1462100',
+      'build': '2001100',
       'c_locale': 'zh_CN',
       'channel': 'yingyongbao',
       'column': '4',
@@ -136,10 +136,11 @@ class VideoHttp {
         'bili-http-engine': 'cronet',
       }),
     );
+    log(res.data['data'].toString());
     if (res.data['code'] == 0) {
       List<RecVideoItemAppModel> list = [];
-      List<int> blackMidsList = localCache
-          .get(LocalCacheKey.blackMidsList, defaultValue: [-1])
+      List<int> blackMidsList = onlineCache
+          .get(OnlineCacheKey.blackMidsList, defaultValue: [-1])
           .map<int>((e) => e as int)
           .toList();
       for (var i in res.data['data']['items']) {
@@ -171,8 +172,8 @@ class VideoHttp {
       );
       if (res.data['code'] == 0) {
         List<HotVideoItemModel> list = [];
-        List<int> blackMidsList = localCache
-            .get(LocalCacheKey.blackMidsList, defaultValue: [-1])
+        List<int> blackMidsList = onlineCache
+            .get(OnlineCacheKey.blackMidsList, defaultValue: [-1])
             .map<int>((e) => e as int)
             .toList();
         for (var i in res.data['data']['list']) {
@@ -266,6 +267,11 @@ class VideoHttp {
 
   // 相关视频
   static Future relatedVideoList({required String bvid}) async {
+    print(
+        'RecommendFilter.disableRelatedVideos: ${RecommendFilter.disableRelatedVideos}');
+    if (RecommendFilter.disableRelatedVideos) {
+      return {'status': true, 'data': []};
+    }
     var res = await Request().get(Api.relatedList, data: {'bvid': bvid});
     if (res.data['code'] == 0) {
       List<HotVideoItemModel> list = [];
@@ -662,10 +668,10 @@ class VideoHttp {
     }
   }
 
-  static Future subtitlesJson(
+  static Future videoMetaInfo(
       {String? aid, String? bvid, required int cid}) async {
     assert(aid != null || bvid != null);
-    var res = await Request().get(Api.subtitleUrl, data: {
+    var res = await Request().get(Api.videoMetaInfo, data: {
       if (aid != null) 'aid': aid,
       if (bvid != null) 'bvid': bvid,
       'cid': cid,
@@ -778,8 +784,8 @@ class VideoHttp {
       var res = await Request().get(rankApi);
       if (res.data['code'] == 0) {
         List<HotVideoItemModel> list = [];
-        List<int> blackMidsList = localCache
-            .get(LocalCacheKey.blackMidsList, defaultValue: [-1])
+        List<int> blackMidsList = onlineCache
+            .get(OnlineCacheKey.blackMidsList, defaultValue: [-1])
             .map<int>((e) => e as int)
             .toList();
         for (var i in res.data['data']['list']) {
@@ -793,6 +799,32 @@ class VideoHttp {
       }
     } catch (err) {
       return {'status': false, 'data': [], 'msg': err};
+    }
+  }
+
+  // 视频分区
+  static Future getRegionVideoList(int tid, int pn, int ps) async {
+    var res = await Request().get(Api.getRegionApi, data: {
+      'rid': tid,
+      'pn': pn,
+      'ps': ps,
+    });
+    print("getRegionVideoList: $res");
+    if (res.data['code'] == 0) {
+      List<HotVideoItemModel> list = [];
+      List<int> blackMidsList = onlineCache
+          .get(OnlineCacheKey.blackMidsList, defaultValue: [-1])
+          .map<int>((e) => e as int)
+          .toList();
+      print(res.data['data']['archives']);
+      for (var i in res.data['data']['archives']) {
+        if (!blackMidsList.contains(i['owner']['mid'])) {
+          list.add(HotVideoItemModel.fromJson(i));
+        }
+      }
+      return {'status': true, 'data': list};
+    } else {
+      return {'status': false, 'data': [], 'msg': res.data['message']};
     }
   }
 }

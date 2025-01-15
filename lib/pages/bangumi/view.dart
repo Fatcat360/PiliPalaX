@@ -74,11 +74,14 @@ class _BangumiPageState extends State<BangumiPage>
   Widget build(BuildContext context) {
     super.build(context);
     return RefreshIndicator(
+      displacement: 10.0,
+      edgeOffset: 10.0,
       onRefresh: () async {
         await _bangumiController.queryBangumiListFeed();
         return _bangumiController.queryBangumiFollow();
       },
       child: CustomScrollView(
+        cacheExtent: 3500,
         controller: _bangumiController.scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [

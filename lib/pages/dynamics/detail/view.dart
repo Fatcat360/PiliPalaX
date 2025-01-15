@@ -11,9 +11,9 @@ import 'package:PiliPalaX/models/common/reply_type.dart';
 import 'package:PiliPalaX/models/dynamics/result.dart';
 import 'package:PiliPalaX/pages/dynamics/detail/index.dart';
 import 'package:PiliPalaX/pages/dynamics/widgets/author_panel.dart';
-import 'package:PiliPalaX/pages/video/detail/reply/widgets/reply_item.dart';
-import 'package:PiliPalaX/pages/video/detail/reply_new/index.dart';
-import 'package:PiliPalaX/pages/video/detail/reply_reply/index.dart';
+import 'package:PiliPalaX/pages/video/reply/widgets/reply_item.dart';
+import 'package:PiliPalaX/pages/video/reply_new/index.dart';
+import 'package:PiliPalaX/pages/video/reply_reply/index.dart';
 import 'package:PiliPalaX/utils/feed_back.dart';
 import 'package:PiliPalaX/utils/id_utils.dart';
 
@@ -22,7 +22,7 @@ import '../widgets/dynamic_panel.dart';
 
 class DynamicDetailPage extends StatefulWidget {
   // const DynamicDetailPage({super.key});
-  const DynamicDetailPage({Key? key}) : super(key: key);
+  const DynamicDetailPage({super.key});
 
   @override
   State<DynamicDetailPage> createState() => _DynamicDetailPageState();
@@ -210,6 +210,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage>
         // actions: _detailModel != null ? appBarAction() : [],
       ),
       body: RefreshIndicator(
+        displacement: 10.0,
+        edgeOffset: 10.0,
         onRefresh: () async {
           await _dynamicDetailController.queryReplyList(reqType: 'init');
         },
@@ -220,6 +222,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage>
                 double padding = max(context.width / 2 - Grid.maxRowWidth, 0);
                 if (orientation == Orientation.portrait) {
                   return CustomScrollView(
+                    cacheExtent: 3500,
                     controller: scrollController,
                     physics: const AlwaysScrollableScrollPhysics(),
                     slivers: [
@@ -242,6 +245,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage>
                     children: [
                       Expanded(
                         child: CustomScrollView(
+                            cacheExtent: 3500,
                             controller: ScrollController(),
                             physics: const AlwaysScrollableScrollPhysics(),
                             slivers: [
@@ -257,6 +261,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage>
                       ),
                       Expanded(
                         child: CustomScrollView(
+                            cacheExtent: 3500,
                             controller: scrollController,
                             physics: const AlwaysScrollableScrollPhysics(),
                             slivers: [

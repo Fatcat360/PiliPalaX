@@ -6,9 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:get/get.dart';
 import 'package:PiliPalaX/common/constants.dart';
 import 'package:PiliPalaX/common/skeleton/video_card_v.dart';
-import 'package:PiliPalaX/common/widgets/animated_dialog.dart';
 import 'package:PiliPalaX/common/widgets/http_error.dart';
-import 'package:PiliPalaX/common/widgets/overlay_pop.dart';
 import 'package:PiliPalaX/common/widgets/video_card_v.dart';
 import 'package:PiliPalaX/pages/home/index.dart';
 import 'package:PiliPalaX/pages/main/index.dart';
@@ -79,11 +77,14 @@ class _RcmdPageState extends State<RcmdPage>
         borderRadius: BorderRadius.all(StyleString.imgRadius),
       ),
       child: RefreshIndicator(
+        displacement: 10.0,
+        edgeOffset: 10.0,
         onRefresh: () async {
           await _rcmdController.onRefresh();
           await Future.delayed(const Duration(milliseconds: 300));
         },
         child: CustomScrollView(
+          cacheExtent: 3500,
           controller: _rcmdController.scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
@@ -106,7 +107,7 @@ class _RcmdPageState extends State<RcmdPage>
                       );
                     } else {
                       return HttpError(
-                        errMsg: data == null ? "" : data['msg'],
+                        errMsg: data['msg'],
                         fn: () {
                           setState(() {
                             _futureBuilderFuture =
@@ -127,23 +128,6 @@ class _RcmdPageState extends State<RcmdPage>
     );
   }
 
-  void _removePopupDialog() {
-    _rcmdController.popupDialog.last?.remove();
-    _rcmdController.popupDialog.removeLast();
-  }
-
-  OverlayEntry _createPopupDialog(videoItem) {
-    return OverlayEntry(
-      builder: (context) => AnimatedDialog(
-        closeFn: _removePopupDialog,
-        child: OverlayPop(
-          videoItem: videoItem,
-          closeFn: _removePopupDialog,
-        ),
-      ),
-    );
-  }
-
   Widget contentGrid(ctr, videoList) {
     return SliverGrid(
       gridDelegate: SliverGridDelegateWithExtentAndRatio(
@@ -159,16 +143,7 @@ class _RcmdPageState extends State<RcmdPage>
       delegate: SliverChildBuilderDelegate(
         (BuildContext context, int index) {
           return videoList!.isNotEmpty
-              ? VideoCardV(
-                  videoItem: videoList[index],
-                  longPress: () {
-                    _rcmdController.popupDialog
-                        .add(_createPopupDialog(videoList[index]));
-                    Overlay.of(context)
-                        .insert(_rcmdController.popupDialog.last!);
-                  },
-                  longPressEnd: _removePopupDialog,
-                )
+              ? VideoCardV(videoItem: videoList[index])
               : const VideoCardVSkeleton();
         },
         childCount: videoList!.isNotEmpty ? videoList!.length : 10,

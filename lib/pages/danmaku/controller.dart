@@ -2,13 +2,18 @@ import 'package:PiliPalaX/http/danmaku.dart';
 import 'package:PiliPalaX/models/danmaku/dm.pb.dart';
 import 'package:flutter/cupertino.dart';
 
+import '../../utils/storage.dart';
+
 class PlDanmakuController {
-  PlDanmakuController(this.cid, this.danmakuWeightNotifier, this.danmakuFilterNotifier);
   final int cid;
-  final ValueNotifier<int> danmakuWeightNotifier;
-  final ValueNotifier<List<Map<String, dynamic>>> danmakuFilterNotifier;
-  int danmakuWeight = 0;
-  List<Map<String, dynamic>> danmakuFilter = [];
+  static int danmakuWeight = 0;
+  static List<Map<String, dynamic>> danmakuFilter = [];
+  // 按类型屏蔽弹幕转为滚动弹幕
+  static bool convertToScrollDanmaku = true;
+  PlDanmakuController(this.cid) {
+    refresh();
+  }
+
   Map<int, List<DanmakuElem>> dmSegMap = {};
   // 已请求的段落标记
   List<bool> requestedSeg = [];
@@ -17,19 +22,21 @@ class PlDanmakuController {
 
   static int segmentLength = 60 * 6 * 1000;
 
+  static void refresh() {
+    danmakuWeight =
+        GStorage.setting.get(SettingBoxKey.danmakuWeight, defaultValue: 0);
+    danmakuFilter = GStorage.onlineCache.get(OnlineCacheKey.danmakuFilterRule,
+        defaultValue: []).map<Map<String, dynamic>>((e) {
+      return Map<String, dynamic>.from(e);
+    }).toList();
+    convertToScrollDanmaku = GStorage.setting
+        .get(SettingBoxKey.convertToScrollDanmaku, defaultValue: true);
+  }
+
   void initiate(int videoDuration, int progress) {
     if (videoDuration <= 0) {
       return;
     }
-    danmakuWeightNotifier.addListener(() {
-      print(
-          "danmakuWeight changed from $danmakuWeight to ${danmakuWeightNotifier.value}");
-      danmakuWeight = danmakuWeightNotifier.value;
-    });
-    danmakuFilterNotifier.addListener(() {
-      print("danmakuFilter changed from $danmakuFilter to ${danmakuFilterNotifier.value}");
-      danmakuFilter = danmakuFilterNotifier.value;
-    });
     if (requestedSeg.isEmpty) {
       int segCount = (videoDuration / segmentLength).ceil();
       requestedSeg = List<bool>.generate(segCount, (index) => false);
@@ -38,8 +45,6 @@ class PlDanmakuController {
   }
 
   void dispose() {
-    danmakuWeightNotifier.removeListener(() {});
-    danmakuFilterNotifier.removeListener(() {});
     danmakuFilter.clear();
     dmSegMap.clear();
     requestedSeg.clear();
@@ -60,10 +65,13 @@ class PlDanmakuController {
     if (result.elems.isNotEmpty) {
       for (var element in result.elems) {
         int pos = element.progress ~/ 100; //每0.1秒存储一次
-        if (dmSegMap[pos] == null) {
-          dmSegMap[pos] = [];
+        dmSegMap[pos] ??= [];
+        int i = dmSegMap[pos]!.indexWhere((e) => element.weight > e.weight);
+        if (i > 0) {
+          dmSegMap[pos]!.insert(i, element);
+        } else {
+          dmSegMap[pos]!.add(element);
         }
-        dmSegMap[pos]!.add(element);
       }
     }
   }

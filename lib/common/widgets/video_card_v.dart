@@ -4,6 +4,8 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import '../../models/home/rcmd/result.dart';
 import '../../models/model_rec_video_item.dart';
+import 'my_dialog.dart';
+import 'overlay_pop.dart';
 import 'stat/danmu.dart';
 import 'stat/view.dart';
 import '../../http/dynamics.dart';
@@ -19,15 +21,15 @@ import 'video_popup_menu.dart';
 // 视频卡片 - 垂直布局
 class VideoCardV extends StatelessWidget {
   final dynamic videoItem;
-  final Function()? longPress;
-  final Function()? longPressEnd;
+  // final Function()? longPress;
+  // final Function()? longPressEnd;
 
   const VideoCardV({
-    Key? key,
+    super.key,
     required this.videoItem,
-    this.longPress,
-    this.longPressEnd,
-  }) : super(key: key);
+    // this.longPress,
+    // this.longPressEnd,
+  });
 
   bool isStringNumeric(String str) {
     RegExp numericRegex = RegExp(r'^\d+$');
@@ -36,6 +38,7 @@ class VideoCardV extends StatelessWidget {
 
   void onPushDetail(heroTag) async {
     String goto = videoItem.goto;
+    print("goto $goto");
     switch (goto) {
       case 'bangumi':
         if (videoItem.bangumiBadge == '电影') {
@@ -63,12 +66,17 @@ class VideoCardV extends StatelessWidget {
         }
         break;
       case 'av':
+        print("currentRoute: ${Get.currentRoute}");
         String bvid = videoItem.bvid ?? IdUtils.av2bv(videoItem.aid);
-        Get.toNamed('/video?bvid=$bvid&cid=${videoItem.cid}', arguments: {
-          // 'videoItem': videoItem,
-          'pic': videoItem.pic,
-          'heroTag': heroTag,
-        });
+        Get.toNamed(
+          '/video?bvid=$bvid&cid=${videoItem.cid}',
+          arguments: {
+            // 'videoItem': videoItem,
+            'pic': videoItem.pic,
+            'heroTag': heroTag,
+          },
+          // preventDuplicates: false,
+        );
         break;
       // 动态
       case 'picture':
@@ -140,32 +148,34 @@ class VideoCardV extends StatelessWidget {
             CustomSemanticsAction(label: item.title): item.onTap!,
         },
         child: Card(
-            elevation: 0,
-            clipBehavior: Clip.hardEdge,
-            margin: EdgeInsets.zero,
-            child: GestureDetector(
-              onLongPress: () {
-                if (longPress != null) {
-                  longPress!();
-                }
-              },
-              // onLongPressEnd: (details) {
-              //   if (longPressEnd != null) {
-              //     longPressEnd!();
-              //   }
-              // },
-              child: InkWell(
-                onTap: () async => onPushDetail(heroTag),
-                child: Column(
-                  children: [
-                    AspectRatio(
-                      aspectRatio: StyleString.aspectRatio,
-                      child: LayoutBuilder(builder: (context, boxConstraints) {
-                        double maxWidth = boxConstraints.maxWidth;
-                        double maxHeight = boxConstraints.maxHeight;
-                        return Stack(
-                          children: [
-                            Hero(
+          color: Theme.of(context).colorScheme.surface.withOpacity(0.4),
+          elevation: 0,
+          clipBehavior: Clip.hardEdge,
+          margin: EdgeInsets.zero,
+          child: GestureDetector(
+            onLongPress: () {
+              // longPress!();
+            },
+            child: InkWell(
+              onTap: () async => onPushDetail(heroTag),
+              child: Column(
+                children: [
+                  AspectRatio(
+                    aspectRatio: StyleString.aspectRatio,
+                    child: LayoutBuilder(builder: (context, boxConstraints) {
+                      double maxWidth = boxConstraints.maxWidth;
+                      double maxHeight = boxConstraints.maxHeight;
+                      // print('heroTagV: $heroTag');
+                      return Stack(
+                        children: [
+                          GestureDetector(
+                            onLongPress: () {
+                              // 弹窗显示封面
+                              MyDialog.show(
+                                  context, OverlayPop(videoItem: videoItem));
+                            },
+                            behavior: HitTestBehavior.translucent,
+                            child: Hero(
                               tag: heroTag,
                               child: NetworkImgLayer(
                                 src: videoItem.pic,
@@ -173,25 +183,27 @@ class VideoCardV extends StatelessWidget {
                                 height: maxHeight,
                               ),
                             ),
-                            if (videoItem.duration > 0)
-                              PBadge(
-                                bottom: 6,
-                                right: 7,
-                                size: 'small',
-                                type: 'gray',
-                                text: Utils.timeFormat(videoItem.duration),
-                                // semanticsLabel:
-                                //     '时长${Utils.durationReadFormat(Utils.timeFormat(videoItem.duration))}',
-                              )
-                          ],
-                        );
-                      }),
-                    ),
-                    VideoContent(videoItem: videoItem)
-                  ],
-                ),
+                          ),
+                          if (videoItem.duration > 0)
+                            PBadge(
+                              bottom: 6,
+                              right: 7,
+                              size: 'small',
+                              type: 'gray',
+                              text: Utils.timeFormat(videoItem.duration),
+                              // semanticsLabel:
+                              //     '时长${Utils.durationReadFormat(Utils.timeFormat(videoItem.duration))}',
+                            )
+                        ],
+                      );
+                    }),
+                  ),
+                  VideoContent(videoItem: videoItem)
+                ],
               ),
-            )),
+            ),
+          ),
+        ),
       ),
       if (videoItem.goto == 'av')
         Positioned(
@@ -208,7 +220,7 @@ class VideoCardV extends StatelessWidget {
 
 class VideoContent extends StatelessWidget {
   final dynamic videoItem;
-  const VideoContent({Key? key, required this.videoItem}) : super(key: key);
+  const VideoContent({super.key, required this.videoItem});
   @override
   Widget build(BuildContext context) {
     return Expanded(
@@ -302,9 +314,9 @@ class VideoStat extends StatelessWidget {
   final dynamic videoItem;
 
   const VideoStat({
-    Key? key,
+    super.key,
     required this.videoItem,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -358,7 +370,8 @@ class VideoStat extends StatelessWidget {
                           .outline
                           .withOpacity(0.8),
                     ),
-                    text: Utils.shortenChineseDateString(videoItem.desc.split(' · ').last)),
+                    text: Utils.shortenChineseDateString(
+                        videoItem.desc.split(' · ').last)),
               )),
           const SizedBox(width: 2),
         ]

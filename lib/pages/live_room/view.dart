@@ -1,7 +1,9 @@
 import 'dart:io';
 
-import 'package:floating/floating.dart';
+import 'package:PiliPalaX/services/service_locator.dart';
+import 'package:fl_pip/fl_pip.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_floating/floating/manager/floating_manager.dart';
 import 'package:get/get.dart';
 import 'package:PiliPalaX/common/widgets/network_img_layer.dart';
 import 'package:PiliPalaX/plugin/pl_player/index.dart';
@@ -24,17 +26,14 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
   bool isShowCover = true;
   bool isPlay = true;
-  Floating? floating;
 
   @override
   void initState() {
     super.initState();
-    if (Platform.isAndroid) {
-      floating = Floating();
-    }
     videoSourceInit();
     _futureBuilderFuture = _liveRoomController.queryLiveInfo();
-    plPlayerController!.autoEnterFullscreen();
+    plPlayerController!.autoEnterFullScreen();
+    floatingManager.closeFloating(globalId);
   }
 
   Future<void> videoSourceInit() async {
@@ -44,8 +43,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
   @override
   void dispose() {
-    floating?.dispose();
-    plPlayerController!.dispose();
+    // floating?.dispose();
+    plPlayerController!.disable();
     super.dispose();
   }
 
@@ -60,7 +59,6 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             bottomControl: BottomControl(
               controller: plPlayerController,
               liveRoomCtr: _liveRoomController,
-              floating: floating,
             ),
           );
         } else {
@@ -176,7 +174,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                             ),
                             //内置浏览器打开
                             IconButton(
-                              tooltip: '内置浏览器打开',
+                                tooltip: '内置浏览器打开',
                                 onPressed: () {
                                   Get.offNamed(
                                     '/webview',
@@ -228,14 +226,21 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
         ],
       ),
     );
-    if (Platform.isAndroid) {
-      return PiPSwitcher(
-        childWhenDisabled: childWhenDisabled,
-        childWhenEnabled: videoPlayerPanel,
-        floating: floating,
-      );
-    } else {
+    if (!Platform.isAndroid) {
       return childWhenDisabled;
     }
+    return PiPBuilder(builder: (PiPStatusInfo? statusInfo) {
+      print("PiPStatusInfo${statusInfo?.status}");
+      switch (statusInfo?.status) {
+        case PiPStatus.enabled:
+          return videoPlayerPanel;
+        case PiPStatus.disabled:
+          return childWhenDisabled;
+        case PiPStatus.unavailable:
+          return childWhenDisabled;
+        case null:
+          return childWhenDisabled;
+      }
+    });
   }
 }

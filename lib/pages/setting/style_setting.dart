@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:auto_orientation/auto_orientation.dart';
+import 'package:flex_seed_scheme/flex_seed_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -13,7 +14,9 @@ import 'package:PiliPalaX/utils/global_data.dart';
 import 'package:PiliPalaX/utils/storage.dart';
 
 import '../../models/common/dynamic_badge_mode.dart';
+import '../../models/common/side_bar_position.dart';
 import '../../models/common/up_panel_position.dart';
+import '../../plugin/pl_player/controller.dart';
 import '../../plugin/pl_player/utils/fullscreen.dart';
 import '../../models/common/nav_bar_config.dart';
 import 'controller.dart';
@@ -30,23 +33,27 @@ class _StyleSettingState extends State<StyleSetting> {
   final SettingController settingController = Get.put(SettingController());
   final ColorSelectController colorSelectController =
       Get.put(ColorSelectController());
+  FlexSchemeVariant _dynamicSchemeVariant = FlexSchemeVariant.values[
+      GStorage.setting.get(SettingBoxKey.schemeVariant, defaultValue: 10)];
 
   Box setting = GStorage.setting;
   late int picQuality;
-  late ThemeType _tempThemeValue;
   late double maxRowWidth;
   late UpPanelPosition upPanelPosition;
+  late SideBarPosition sideBarPosition;
 
   @override
   void initState() {
     super.initState();
     picQuality = setting.get(SettingBoxKey.defaultPicQa, defaultValue: 10);
-    _tempThemeValue = settingController.themeType.value;
     maxRowWidth =
         setting.get(SettingBoxKey.maxRowWidth, defaultValue: 240.0) as double;
     upPanelPosition = UpPanelPosition.values[setting.get(
         SettingBoxKey.upPanelPosition,
         defaultValue: UpPanelPosition.leftFixed.code)];
+    sideBarPosition = SideBarPositionCode.fromCode(setting.get(
+        SettingBoxKey.sideBarPosition,
+        defaultValue: SideBarPosition.none.code))!;
   }
 
   @override
@@ -81,14 +88,54 @@ class _StyleSettingState extends State<StyleSetting> {
                   AutoOrientation.portraitUpMode();
                   SmartDialog.showToast('已关闭横屏适配');
                 }
+                PlPlayerController.updateSettingsIfExist();
               }),
-          const SetSwitchItem(
-            title: '改用侧边栏',
-            subTitle: '开启后底栏与顶栏被替换，且相关设置失效',
-            leading: Icon(Icons.chrome_reader_mode_outlined),
-            setKey: SettingBoxKey.useSideBar,
-            defaultVal: false,
-            needReboot: true,
+          // const SetSwitchItem(
+          //   title: '改用侧边栏',
+          //   subTitle: '开启后底栏与顶栏被替换，且相关设置失效',
+          //   leading: Icon(Icons.chrome_reader_mode_outlined),
+          //   setKey: SettingBoxKey.useSideBar,
+          //   defaultVal: false,
+          //   needReboot: true,
+          // ),
+          ListTile(
+            dense: false,
+            title: Text('主页侧栏布局', style: titleStyle),
+            leading: const Icon(Icons.chrome_reader_mode_outlined),
+            subtitle: Text(
+                '当前：${sideBarPosition.labels}。开启后底栏与顶栏将被替换为侧栏，横屏或折叠屏推荐使用',
+                style: subTitleStyle),
+            onTap: () async {
+              SideBarPosition? result = await showDialog(
+                context: context,
+                builder: (context) {
+                  return SelectDialog<SideBarPosition>(
+                    title: '侧边栏显示位置',
+                    value: sideBarPosition,
+                    values: SideBarPosition.values.map((e) {
+                      return {'title': e.labels, 'value': e};
+                    }).toList(),
+                  );
+                },
+              );
+              if (result != null) {
+                sideBarPosition = result;
+                setting.put(SettingBoxKey.sideBarPosition, result.code);
+                SmartDialog.showToast('重启生效');
+                setState(() {});
+              }
+            },
+          ),
+          ListTile(
+            dense: false,
+            onTap: () => Get.toNamed('/colorSetting'),
+            leading: const Icon(Icons.color_lens_outlined),
+            title: Text('应用主题', style: titleStyle),
+            subtitle: Obx(() => Text(
+                '${settingController.themeType.value.description}   '
+                '${colorSelectController.type.value == 0 ? '动态取色' : '指定颜色'}   '
+                '${_dynamicSchemeVariant.variantName}',
+                style: subTitleStyle)),
           ),
           const SetSwitchItem(
             title: 'MD3样式底栏',
@@ -312,42 +359,6 @@ class _StyleSettingState extends State<StyleSetting> {
             trailing: Obx(() => Text(
                 settingController.toastOpacity.value.toStringAsFixed(1),
                 style: Theme.of(context).textTheme.titleSmall)),
-          ),
-          ListTile(
-            dense: false,
-            onTap: () async {
-              ThemeType? result = await showDialog(
-                context: context,
-                builder: (context) {
-                  return SelectDialog<ThemeType>(
-                      title: '主题模式',
-                      value: _tempThemeValue,
-                      values: ThemeType.values.map((e) {
-                        return {'title': e.description, 'value': e};
-                      }).toList());
-                },
-              );
-              if (result != null) {
-                _tempThemeValue = result;
-                settingController.themeType.value = result;
-                setting.put(SettingBoxKey.themeMode, result.code);
-                Get.forceAppUpdate();
-              }
-            },
-            leading: const Icon(Icons.flashlight_on_outlined),
-            title: Text('主题模式', style: titleStyle),
-            subtitle: Obx(() => Text(
-                '当前模式：${settingController.themeType.value.description}',
-                style: subTitleStyle)),
-          ),
-          ListTile(
-            dense: false,
-            onTap: () => Get.toNamed('/colorSetting'),
-            leading: const Icon(Icons.color_lens_outlined),
-            title: Text('应用主题', style: titleStyle),
-            subtitle: Obx(() => Text(
-                '当前主题：${colorSelectController.type.value == 0 ? '动态取色' : '指定颜色'}',
-                style: subTitleStyle)),
           ),
           ListTile(
             dense: false,

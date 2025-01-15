@@ -19,8 +19,9 @@ class _PlaySpeedPageState extends State<PlaySpeedPage> {
   Box settingStorage = GStorage.setting;
   late double playSpeedDefault;
   late double longPressSpeedDefault;
-  late List customSpeedsList;
+  late List<double> customSpeedsList;
   late bool enableAutoLongPressSpeed;
+  late bool enableLongPressSpeedIncrease;
   List<Map<dynamic, dynamic>> sheetMenu = [
     {
       'id': 1,
@@ -55,14 +56,17 @@ class _PlaySpeedPageState extends State<PlaySpeedPage> {
   void initState() {
     super.initState();
     // 默认倍速
-    playSpeedDefault =
-        videoStorage.get(VideoBoxKey.playSpeedDefault, defaultValue: 1.0);
+    playSpeedDefault = videoStorage
+        .get(VideoBoxKey.playSpeedDefault, defaultValue: 1.0)
+        .toDouble();
     // 默认长按倍速
-    longPressSpeedDefault =
-        videoStorage.get(VideoBoxKey.longPressSpeedDefault, defaultValue: 3.0);
-    // 自定义倍速
-    customSpeedsList =
-        videoStorage.get(VideoBoxKey.customSpeedsList, defaultValue: []);
+    longPressSpeedDefault = videoStorage
+        .get(VideoBoxKey.longPressSpeedDefault, defaultValue: 3.0)
+        .toDouble();
+    List<double> defaultList = <double>[0.5, 0.75, 1.25, 1.5, 1.75, 3.0];
+    customSpeedsList = List<double>.from(videoStorage
+        .get(VideoBoxKey.customSpeedsList, defaultValue: defaultList)
+        .map((e) => e.toDouble()));
     enableAutoLongPressSpeed = settingStorage
         .get(SettingBoxKey.enableAutoLongPressSpeed, defaultValue: false);
     if (enableAutoLongPressSpeed) {
@@ -72,6 +76,8 @@ class _PlaySpeedPageState extends State<PlaySpeedPage> {
         sheetMenu[1] = newItem;
       });
     }
+    enableLongPressSpeedIncrease = settingStorage
+        .get(SettingBoxKey.enableLongPressSpeedIncrease, defaultValue: false);
   }
 
   // 添加自定义倍速
@@ -111,6 +117,7 @@ class _PlaySpeedPageState extends State<PlaySpeedPage> {
                 customSpeedsList.add(customSpeed);
                 await videoStorage.put(
                     VideoBoxKey.customSpeedsList, customSpeedsList);
+                PlPlayerController.updateSettingsIfExist();
                 setState(() {});
                 Get.back();
               },
@@ -194,6 +201,7 @@ class _PlaySpeedPageState extends State<PlaySpeedPage> {
       customSpeedsList.removeAt(index);
       await videoStorage.put(VideoBoxKey.customSpeedsList, customSpeedsList);
     }
+    PlPlayerController.updateSettingsIfExist();
     setState(() {});
     SmartDialog.showToast('操作成功');
   }
@@ -215,17 +223,10 @@ class _PlaySpeedPageState extends State<PlaySpeedPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding:
-                  const EdgeInsets.only(left: 14, right: 14, top: 6, bottom: 0),
-              child: Text(
-                '点击下方按钮设置默认（长按）倍速',
-                style: TextStyle(color: Theme.of(context).colorScheme.outline),
-              ),
-            ),
             ListTile(
               dense: false,
-              title: const Text('默认倍速'),
+              title: Text('当前默认倍速',
+                  style: Theme.of(context).textTheme.titleMedium),
               subtitle: Text(playSpeedDefault.toString()),
             ),
             SetSwitchItem(
@@ -240,15 +241,34 @@ class _PlaySpeedPageState extends State<PlaySpeedPage> {
                   sheetMenu[1] = newItem;
                   enableAutoLongPressSpeed = val;
                 });
+                PlPlayerController.updateSettingsIfExist();
               },
             ),
             !enableAutoLongPressSpeed
                 ? ListTile(
                     dense: false,
-                    title: const Text('默认长按倍速'),
+                    title: Text('默认长按倍速',
+                        style: Theme.of(context).textTheme.titleMedium),
                     subtitle: Text(longPressSpeedDefault.toString()),
                   )
                 : const SizedBox(),
+            SetSwitchItem(
+              title: '长按倍速递增',
+              subTitle: '每长按半秒，倍速*1.15，最大8倍速',
+              setKey: SettingBoxKey.enableLongPressSpeedIncrease,
+              defaultVal: false,
+              callFn: (_) {
+                PlPlayerController.updateSettingsIfExist();
+              },
+            ),
+            Padding(
+              padding:
+                  const EdgeInsets.only(left: 14, right: 14, top: 6, bottom: 0),
+              child: Text(
+                '点击下方按钮设置默认倍速、默认长按倍速',
+                style: TextStyle(color: Theme.of(context).colorScheme.outline),
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.only(
                 left: 14,
@@ -330,6 +350,14 @@ class _PlaySpeedPageState extends State<PlaySpeedPage> {
                       ),
                     ),
             ),
+            ListTile(
+              subtitle: Text(
+                '注：由于播放器性能限制，4k、8k视频以大于2倍速播放，可能会出现卡顿、音画不同步等问题，请酌情选择。',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+              ),
+            )
           ],
         ),
       ),

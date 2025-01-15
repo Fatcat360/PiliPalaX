@@ -1,14 +1,17 @@
 // 视频or合集
 import 'package:flutter/material.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:PiliPalaX/common/constants.dart';
 import 'package:PiliPalaX/common/widgets/badge.dart';
 import 'package:PiliPalaX/common/widgets/network_img_layer.dart';
 import 'package:PiliPalaX/utils/utils.dart';
 
+import '../../../common/widgets/my_dialog.dart';
+import '../../../common/widgets/overlay_pop.dart';
 import 'rich_node_panel.dart';
 
-Widget videoSeasonWidget(item, context, type, {floor = 1}) {
+Widget videoSeasonWidget(item, context, type, source, {floor = 1}) {
   TextStyle authorStyle =
       TextStyle(color: Theme.of(context).colorScheme.primary);
   // type archive  ugcSeason
@@ -73,23 +76,34 @@ Widget videoSeasonWidget(item, context, type, {floor = 1}) {
       //   const SizedBox(height: 6),
       // ],
       if (floor == 2 && item.modules.moduleDynamic.desc != null) ...[
-        Text.rich(richNode(item, context)),
+        Text.rich(richNode(item, context)!,
+            maxLines: source == 'detail' ? 999 : 6,
+            overflow: TextOverflow.fade),
         const SizedBox(height: 6),
       ],
       Padding(
-          padding: EdgeInsets.symmetric(horizontal: StyleString.safeSpace),
+          padding:
+              const EdgeInsets.symmetric(horizontal: StyleString.safeSpace),
           child: LayoutBuilder(builder: (context, box) {
             double width = box.maxWidth;
             return Stack(
               children: [
-                Hero(
-                  tag: content.bvid,
-                  child: NetworkImgLayer(
-                    type: null,
-                    width: width,
-                    height: width / StyleString.aspectRatio,
-                    src: content.cover,
-                    semanticsLabel: content.title,
+                GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onLongPress: () {
+                    // 弹窗显示封面
+                    MyDialog.show(
+                        context, OverlayPop(videoItem: content));
+                  },
+                  child: Hero(
+                    tag: content.bvid,
+                    child: NetworkImgLayer(
+                      type: null,
+                      width: width,
+                      height: width / StyleString.aspectRatio,
+                      src: content.cover,
+                      semanticsLabel: content.title,
+                    ),
                   ),
                 ),
                 if (content.badge != null && type == 'pgc')

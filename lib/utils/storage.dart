@@ -13,6 +13,7 @@ class GStorage {
   static late final Box<dynamic> localCache;
   static late final Box<dynamic> setting;
   static late final Box<dynamic> video;
+  static late final Box<dynamic> onlineCache;
 
   static Future<void> init() async {
     final Directory dir = await getApplicationSupportDirectory();
@@ -44,13 +45,34 @@ class GStorage {
     );
     // 视频设置
     video = await Hive.openBox('video');
+    onlineCache = await Hive.openBox('onlineCache');
     GlobalData().imgQuality =
         setting.get(SettingBoxKey.defaultPicQa, defaultValue: 10); // 设置全局变量
   }
 
+  // 特殊处理playerGestureActionMap的逻辑
+  // json不支持Map<int, int>，需要使用Map<String, int>中介
+  static String specialKey = SettingBoxKey.playerGestureActionMap;
+
+  static Map toEncodableManually(Map data) {
+    if (data.containsKey(specialKey)) {
+      data[specialKey] =
+          data[specialKey].map((key, value) => MapEntry(key.toString(), value));
+    }
+    return data;
+  }
+
+  static Map fromEncodableManually(Map data) {
+    if (data.containsKey(specialKey)) {
+      data[specialKey] =
+          data[specialKey].map((key, value) => MapEntry(int.parse(key), value));
+    }
+    return data;
+  }
+
   static Future<String> exportAllSettings() async {
     return jsonEncode({
-      setting.name: setting.toMap(),
+      setting.name: toEncodableManually(setting.toMap()),
       video.name: video.toMap(),
     });
   }
@@ -59,7 +81,7 @@ class GStorage {
     final Map<String, dynamic> map = jsonDecode(data);
     await setting.clear();
     await video.clear();
-    await setting.putAll(map[setting.name]);
+    await setting.putAll(fromEncodableManually(map[setting.name]));
     await video.putAll(map[video.name]);
   }
 
@@ -84,6 +106,8 @@ class GStorage {
     setting.close();
     video.compact();
     video.close();
+    onlineCache.compact();
+    onlineCache.close();
   }
 }
 
@@ -109,7 +133,6 @@ class SettingBoxKey {
       videoSync = 'videoSync',
       enableVerticalExpand = 'enableVerticalExpand',
       enableOnlineTotal = 'enableOnlineTotal',
-      enableAutoBrightness = 'enableAutoBrightness',
       enableAutoEnter = 'enableAutoEnter',
       enableAutoExit = 'enableAutoExit',
       enableLongShowControl = 'enableLongShowControl',
@@ -119,17 +142,23 @@ class SettingBoxKey {
       CDNService = 'CDNService',
       disableAudioCDN = 'disableAudioCDN',
       // enableCDN = 'enableCDN',
+      autoMiniPlayer = 'autoMiniPlayer',
       autoPiP = 'autoPiP',
       pipNoDanmaku = 'pipNoDanmaku',
       enableAutoLongPressSpeed = 'enableAutoLongPressSpeed',
+      enableLongPressSpeedIncrease = 'enableLongPressSpeedIncrease',
       subtitlePreference = 'subtitlePreference',
-
+      playerGestureActionMap = 'playerGestureActionMap',
       // youtube 双击快进快退
       enableQuickDouble = 'enableQuickDouble',
-      fullScreenGestureReverse = 'fullScreenGestureReverse',
+      enableAdjustBrightnessVolume = 'enableAdjustBrightnessVolume',
+      enableExtraButtonOnFullScreen = 'enableExtraButtonOnFullScreen',
+      // fullScreenGestureReverse = 'fullScreenGestureReverse',
+      // enableFloatingWindowGesture = 'enableFloatingWindowGesture',
       enableShowDanmaku = 'enableShowDanmaku',
       enableBackgroundPlay = 'enableBackgroundPlay',
       continuePlayInBackground = 'continuePlayInBackground',
+      setSystemBrightness = 'setSystemBrightness',
 
       /// 隐私
       anonymity = 'anonymity',
@@ -144,11 +173,13 @@ class SettingBoxKey {
       banWordForRecommend = 'banWordForRecommend',
       //filterUnfollowedRatio = 'filterUnfollowedRatio',
       applyFilterToRelatedVideos = 'applyFilterToRelatedVideos',
+      disableRelatedVideos = 'disableRelatedVideos',
 
       /// 其他
       autoUpdate = 'autoUpdate',
       autoClearCache = 'autoClearCache',
       defaultShowComment = 'defaultShowComment',
+      defaultExpandIntroduction = 'defaultExpandIntroduction',
       replySortType = 'replySortType',
       defaultDynamicType = 'defaultDynamicType',
       enableHotKey = 'enableHotKey',
@@ -160,7 +191,7 @@ class SettingBoxKey {
       disableLikeMsg = 'disableLikeMsg',
       defaultHomePage = 'defaultHomePage',
 
-      // 弹幕相关设置 权重（云屏蔽） 屏蔽类型 显示区域 透明度 字体大小 弹幕时间 描边粗细 字体粗细
+      // 弹幕相关设置 权重（云屏蔽） 屏蔽类型 显示区域 透明度 字体大小 弹幕时间 描边粗细 字体粗细 海量模式
       danmakuWeight = 'danmakuWeight',
       danmakuBlockType = 'danmakuBlockType',
       danmakuShowArea = 'danmakuShowArea',
@@ -169,6 +200,8 @@ class SettingBoxKey {
       danmakuDuration = 'danmakuDuration',
       strokeWidth = 'strokeWidth',
       fontWeight = 'fontWeight',
+      danmakuMassiveMode = 'danmakuMassiveMode',
+      convertToScrollDanmaku = 'convertToScrollDanmaku',
 
       // 代理host port
       systemProxyHost = 'systemProxyHost',
@@ -179,6 +212,7 @@ class SettingBoxKey {
       defaultTextScale = 'textScale',
       dynamicColor = 'dynamicColor', // bool
       customColor = 'customColor', // 自定义主题色
+      schemeVariant = 'schemeVariant',
       enableSingleRow = 'enableSingleRow', // 首页单列
       displayMode = 'displayMode',
       maxRowWidth = 'maxRowWidth', // 首页列最大宽度（dp）
@@ -188,7 +222,8 @@ class SettingBoxKey {
       dynamicsWaterfallFlow = 'dynamicsWaterfallFlow', // 动态瀑布流
       upPanelPosition = 'upPanelPosition', // up主面板位置
       dynamicsShowAllFollowedUp = 'dynamicsShowAllFollowedUp', // 动态显示全部关注up
-      useSideBar = 'useSideBar',
+      // useSideBar = 'useSideBar',
+      sideBarPosition = 'sideBarPosition',
       enableMYBar = 'enableMYBar',
       hideSearchBar = 'hideSearchBar', // 收起顶栏
       hideTabBar = 'hideTabBar', // 收起底栏
@@ -202,10 +237,6 @@ class LocalCacheKey {
   // 历史记录暂停状态 默认false 记录
   static const String historyPause = 'historyPause',
 
-      // 隐私设置-黑名单管理
-      blackMidsList = 'blackMidsList',
-      // 弹幕屏蔽规则
-      danmakuFilterRule = 'danmakuFilterRule',
       // access_key
       accessKey = 'accessKey',
 
@@ -218,7 +249,7 @@ class VideoBoxKey {
   // 视频比例
   static const String videoFit = 'videoFit',
       // 亮度
-      videoBrightness = 'videoBrightness',
+      // videoBrightness = 'videoBrightness',
       // 倍速
       videoSpeed = 'videoSpeed',
       // 播放顺序
@@ -230,5 +261,17 @@ class VideoBoxKey {
       // 自定义倍速集合
       customSpeedsList = 'customSpeedsList',
       // 画面填充比例
-      cacheVideoFit = 'cacheVideoFit';
+      cacheVideoFit = 'cacheVideoFit',
+      // 字幕字体大小
+      subtitleFontSize = 'subtitleFontSize',
+      // 字幕距底边距
+      subtitleBottomPadding = 'subtitleBottomPadding';
+}
+
+class OnlineCacheKey {
+  static const String
+      // 隐私设置-黑名单管理
+      blackMidsList = 'blackMidsList',
+      // 弹幕屏蔽规则
+      danmakuFilterRule = 'danmakuFilterRule';
 }

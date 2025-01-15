@@ -1,4 +1,9 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:html/dom.dart';
+import 'package:flutter/foundation.dart';
 import 'package:html/parser.dart';
 import 'index.dart';
 
@@ -57,7 +62,7 @@ class HtmlHttp {
         'avatar': avatar,
         'uname': uname,
         'updateTime': updateTime,
-        'content': (test ?? '') + opusContent,
+        'content': test + opusContent,
         'commentId': int.parse(commentId)
       };
     } catch (err) {
@@ -69,7 +74,11 @@ class HtmlHttp {
   static Future reqReadHtml(id, dynamicType) async {
     var response = await Request().get(
       "https://www.bilibili.com/$dynamicType/$id/",
-      extra: {'ua': 'pc'},
+      options: Options(headers: {
+        HttpHeaders.userAgentHeader: 'Mozilla/5.0',
+        HttpHeaders.refererHeader: 'https://www.bilibili.com/',
+        HttpHeaders.cookieHeader: 'opus-goback=1',
+      }),
     );
     Document rootTree = parse(response.data);
     Element body = rootTree.body!;
@@ -84,8 +93,9 @@ class HtmlHttp {
         .group(1)!
         .replaceAll(r'\u002F', '/')
         .split('@')[0];
-    // print(avatar);
+    print("avatar: $avatar");
     String uname = authorHeader.querySelector('.up-name')!.text.trim();
+    print("uname: $uname");
     // 动态详情
     Element opusDetail = appDom.querySelector('.article-content')!;
     // 发布时间
@@ -96,6 +106,14 @@ class HtmlHttp {
     //
     String opusContent =
         opusDetail.querySelector('#read-article-holder')?.innerHtml ?? '';
+    print("opusContent: $opusContent");
+    if (opusContent.isEmpty) {
+      // 查找形如"dyn_id_str":"(\d+)"的id
+      String opusid =
+          RegExp(r'"dyn_id_str":"(\d+)"').firstMatch(response.data)!.group(1)!;
+      print("opusid: $opusid");
+      return await reqHtml(opusid, 'opus');
+    }
     RegExp digitRegExp = RegExp(r'\d+');
     Iterable<Match> matches = digitRegExp.allMatches(id);
     String number = matches.first.group(0)!;

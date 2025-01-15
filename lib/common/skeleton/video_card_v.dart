@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'skeleton.dart';
 
 class VideoCardVSkeleton extends StatelessWidget {
-  const VideoCardVSkeleton({Key? key}) : super(key: key);
+  const VideoCardVSkeleton({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +37,12 @@ class VideoCardVSkeleton extends StatelessWidget {
                   width: 200,
                   height: 13,
                   margin: const EdgeInsets.only(bottom: 5),
+                  color: Theme.of(context).colorScheme.onInverseSurface,
+                ),
+                Container(
+                  width: 150,
+                  height: 13,
+                  margin: const EdgeInsets.only(bottom: 12),
                   color: Theme.of(context).colorScheme.onInverseSurface,
                 ),
                 Container(

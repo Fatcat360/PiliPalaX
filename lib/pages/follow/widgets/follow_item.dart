@@ -3,9 +3,11 @@ import 'package:get/get.dart';
 import 'package:PiliPalaX/common/widgets/network_img_layer.dart';
 import 'package:PiliPalaX/models/follow/result.dart';
 import 'package:PiliPalaX/pages/follow/index.dart';
-import 'package:PiliPalaX/pages/video/detail/introduction/widgets/group_panel.dart';
+import 'package:PiliPalaX/pages/video/introduction/widgets/group_panel.dart';
 import 'package:PiliPalaX/utils/feed_back.dart';
 import 'package:PiliPalaX/utils/utils.dart';
+
+import '../../../common/widgets/my_dialog.dart';
 
 class FollowItem extends StatelessWidget {
   final FollowItemModel item;
@@ -46,11 +48,8 @@ class FollowItem extends StatelessWidget {
           ? SizedBox(
               height: 34,
               child: TextButton(
-                onPressed: () async {
-                  await Get.bottomSheet(
-                    GroupPanel(mid: item.mid!),
-                    isScrollControlled: true,
-                  );
+                onPressed: () {
+                  MyDialog.show(context, GroupPanel(mid: item.mid!));
                 },
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.fromLTRB(15, 0, 15, 0),
